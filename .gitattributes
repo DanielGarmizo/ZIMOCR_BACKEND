@@ -1,0 +1,11 @@
+# שומר על LF לכל הקבצים בקוד
+* text=auto eol=lf
+
+# שומר על CRLF לקבצי Batch ו-Shell לפי הצורך
+*.bat text eol=crlf
+*.sh text eol=lf
+
+# שומר על קבצים בינאריים כמו שהם
+*.png binary
+*.jpg binary
+*.jar binary
