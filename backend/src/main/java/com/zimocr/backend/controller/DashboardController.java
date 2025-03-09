@@ -1,24 +1,22 @@
 package com.zimocr.backend.controller;
 
+import com.zimocr.backend.dto.DashboardDto;
 import com.zimocr.backend.service.DashboardService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/dashboard")
+@RequiredArgsConstructor
 public class DashboardController {
+
     private final DashboardService dashboardService;
 
-    public DashboardController(DashboardService dashboardService) {
-        this.dashboardService = dashboardService;
-    }
-
-    @GetMapping("/statistics")
-    public Map<String, List<Object[]>> getAllRankings() {
-        return dashboardService.getAllRankings();
+    @GetMapping
+    public Map<String, List<DashboardDto>> getDashboardData() {
+        return dashboardService.getDashboardData();
     }
 }

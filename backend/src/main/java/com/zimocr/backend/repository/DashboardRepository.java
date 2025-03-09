@@ -16,7 +16,7 @@ public interface DashboardRepository extends CrudRepository<BillOfLading, Long> 
             RANK() OVER (ORDER BY COUNT(voyage_number) DESC) AS rank
         FROM bill_of_lading
         GROUP BY agent_name
-        """, nativeQuery = true)
+    """, nativeQuery = true)
     List<Object[]> rankAgenciesByVoyageCount();
 
     @Query(value = """
@@ -33,60 +33,57 @@ public interface DashboardRepository extends CrudRepository<BillOfLading, Long> 
             GROUP BY voyage_number, agent_name
         ) voyage_weights
         GROUP BY agent_name
-        """, nativeQuery = true)
+    """, nativeQuery = true)
     List<Object[]> rankAgenciesByAvgWeightPerVoyage();
 
     @Query(value = """ 
         SELECT 
-            agentName, 
-            COUNT(DISTINCT voyageNumber) AS hazardous_voyage_count,
-            RANK() OVER (ORDER BY COUNT(DISTINCT voyageNumber) DESC) AS rank
+            agent_name, 
+            COUNT(DISTINCT voyage_number) AS hazardous_voyage_count,
+            RANK() OVER (ORDER BY COUNT(DISTINCT voyage_number) DESC) AS rank
         FROM bill_of_lading
         WHERE hazardous = TRUE
-        GROUP BY agentName
+        GROUP BY agent_name
     """, nativeQuery = true)
     List<Object[]> rankAgenciesByHazardousVoyages();
 
     @Query(value = """ 
         SELECT 
-            agentName, 
-            SUM(freightCharges::numeric) AS total_freight_charges,
-            RANK() OVER (ORDER BY SUM(freightCharges::numeric) DESC) AS rank
+            agent_name, 
+            freight_charges, 
+            COUNT(*) AS occurrences
         FROM bill_of_lading
-        GROUP BY agentName
+        GROUP BY agent_name, freight_charges
+        ORDER BY agent_name
     """, nativeQuery = true)
-    List<Object[]> rankAgenciesByTotalFreightCharges();
+    List<Object[]> countFreightChargeTypes();
 
     @Query(value = """
-        SELECT agentName AS agency,
-               AVG(voyage_freight.total_freight_charges) AS avg_freight_charges,
-               RANK() OVER (ORDER BY AVG(voyage_freight.total_freight_charges) DESC) AS rank
-        FROM (
-            SELECT voyageNumber,
-                   agentName,
-                   SUM(freightCharges::numeric) AS total_freight_charges
-            FROM bill_of_lading
-            GROUP BY voyageNumber, agentName
-        ) AS voyage_freight
-        GROUP BY agentName
-        ORDER BY avg_freight_charges DESC
+        SELECT 
+            agent_name, 
+            SUM(NULLIF(freight_charges, 'Collect')::numeric) AS total_freight_charges,
+            RANK() OVER (ORDER BY SUM(NULLIF(freight_charges, 'Collect')::numeric) DESC) AS rank
+        FROM bill_of_lading
+        WHERE freight_charges ~ '^[0-9]+(\\.[0-9]+)?$'
+        GROUP BY agent_name
     """, nativeQuery = true)
     List<Object[]> rankAgenciesByAvgFreightCharges();
 
     @Query(value = """
         WITH VoyageFreight AS (
             SELECT
-                agentName,
-                voyageNumber,
-                SUM(freightCharges::numeric) AS total_freight_charges
+                agent_name,
+                voyage_number,
+                SUM(NULLIF(freight_charges, 'Collect')::numeric) AS total_freight_charges
             FROM
                 bill_of_lading
+            WHERE freight_charges ~ '^[0-9]+(\\.[0-9]+)?$'
             GROUP BY
-                agentName, voyageNumber
+                agent_name, voyage_number
         )
         SELECT
-            agentName,
-            voyageNumber,
+            agent_name,
+            voyage_number,
             total_freight_charges,
             RANK() OVER (ORDER BY total_freight_charges DESC) AS rank
         FROM
@@ -97,107 +94,17 @@ public interface DashboardRepository extends CrudRepository<BillOfLading, Long> 
     List<Object[]> rankVoyagesByFreightCharges();
 
     @Query(value = """
-        WITH VoyageDuration AS (
-            SELECT
-                agentName,
-                voyageNumber,
-                EXTRACT(DAY FROM (arrivalDate - departureDate)) AS voyage_duration
-            FROM
-                bill_of_lading
-            WHERE
-                departureDate IS NOT NULL AND arrivalDate IS NOT NULL
-            GROUP BY
-                agentName, voyageNumber, arrivalDate, departureDate
-        )
         SELECT
-            agentName,
-            AVG(voyage_duration) AS avg_voyage_duration,
-            RANK() OVER (ORDER BY AVG(voyage_duration) DESC) AS rank
+            bill_of_lading_number,
+            agent_name,
+            COUNT(freight_charges) AS freight_charge_count,
+            RANK() OVER (ORDER BY COUNT(freight_charges) DESC) AS rank
         FROM
-            VoyageDuration
+            bill_of_lading
         GROUP BY
-            agentName
-        ORDER BY
-            rank
-    """, nativeQuery = true)
-    List<Object[]> rankAgenciesByAvgVoyageDuration();
-
-    @Query(value = """
-        WITH VoyageDurations AS (
-            SELECT
-                agentName,
-                voyageNumber,
-                MIN(EXTRACT(DAY FROM (arrivalDate - departureDate))) AS shortest_duration
-            FROM
-                bill_of_lading
-            WHERE
-                departureDate IS NOT NULL AND arrivalDate IS NOT NULL
-            GROUP BY
-                agentName, voyageNumber
-        )
-        SELECT
-            agentName,
-            shortest_duration,
-            RANK() OVER (ORDER BY shortest_duration ASC) AS rank
-        FROM
-            VoyageDurations
-        ORDER BY
-            rank
-    """, nativeQuery = true)
-    List<Object[]> rankAgenciesByShortestVoyageDuration();
-
-    @Query(value = """
-        SELECT
-            billOfLadingNumber,
-            weightKg,
-            agentName,  
-            RANK() OVER (ORDER BY weightKg DESC) AS rank,
-            SUM(weightKg) OVER () AS total_weight
-        FROM
-            bill_of_lading
-        ORDER BY
-            rank
-    """, nativeQuery = true)
-    List<Object[]> rankBillOfLadingsByWeight();
-
-    @Query(value = """
-        SELECT
-            billOfLadingNumber,
-            volumeM3,
-            agentName,
-            RANK() OVER (ORDER BY volumeM3 DESC) AS rank
-        FROM
-            bill_of_lading
-        ORDER BY
-            rank
-    """, nativeQuery = true)
-    List<Object[]> rankBillOfLadingsByVolume();
-
-    @Query(value = """
-        SELECT
-            voyageNumber,
-            billOfLadingNumber,
-            agentName,
-            quantity,
-            RANK() OVER (PARTITION BY voyageNumber ORDER BY quantity DESC) AS rank
-        FROM
-            bill_of_lading
-        ORDER BY
-            voyageNumber, rank
-    """, nativeQuery = true)
-    List<Object[]> rankBillsByQuantity();
-
-    @Query(value = """
-        SELECT
-            billOfLadingNumber,
-            agentName,
-            freightCharges,
-            RANK() OVER (ORDER BY freightCharges::numeric DESC) AS rank
-        FROM
-            bill_of_lading
+            bill_of_lading_number, agent_name
         ORDER BY
             rank
     """, nativeQuery = true)
     List<Object[]> rankBillsByFreightCharges();
-
 }
