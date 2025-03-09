@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,6 +19,10 @@ public class DocumentService {
     public List<DocumentDto> getAllDocuments() {
         List<BillOfLading> documents = documentRepository.findAll();
         return documents.stream().map(this::convertToDto).collect(Collectors.toList());
+    }
+
+    public Optional<DocumentDto> getDocumentById(Long id) {
+        return documentRepository.findById(id).map(this::convertToDto);
     }
 
     private DocumentDto convertToDto(BillOfLading billOfLading) {
