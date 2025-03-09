@@ -1,4 +1,4 @@
-package com.ZIMOCR.backend.model;
+package com.zimocr.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
