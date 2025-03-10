@@ -23,7 +23,9 @@ CREATE TABLE bill_of_lading (
     agent_address VARCHAR(255),
     agent_contact VARCHAR(255),
     incoterms VARCHAR(255),
-    freight_charges VARCHAR(255),
+    freight_charges NUMERIC,  -- ✅ שונה ל-NUMERIC
     payment_terms VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
